@@ -31,6 +31,11 @@ DEBATE_ROUNDS_DEFAULT = 1
 MAX_NEWS_ITEMS = 8
 NEWS_SUMMARY_MAX_SENTENCES = 2
 
+# How many calendar days of price history to fetch for indicator computation.
+# 365 days gives ~252 trading days — enough EMA warm-up for MACD(26) with headroom.
+DEFAULT_LOOKBACK_DAYS = 365
+
+
 # PostgreSQL connection string.
 # Override at runtime with the DB_URL environment variable if your Postgres
 # user, host, or database name differs from the local default.

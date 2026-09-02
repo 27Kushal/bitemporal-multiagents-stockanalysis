@@ -8,7 +8,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # repo root, for `config` and `src`
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from config import MAX_NEWS_ITEMS, NEWS_SUMMARY_MAX_SENTENCES
 from src.tools.indicators import get_indicators
@@ -17,7 +17,7 @@ from src.tools.prices import get_price_history, get_price_snapshot
 
 
 def main():
-    ticker = sys.argv[1] if len(sys.argv) > 1 else "AAPL"
+    ticker     = sys.argv[1] if len(sys.argv) > 1 else "AAPL"
     as_of_date = date.fromisoformat(sys.argv[2]) if len(sys.argv) > 2 else date.today()
 
     print(f"--- {ticker} as of {as_of_date} ---\n")
@@ -29,7 +29,9 @@ def main():
     snapshot = get_price_snapshot(df)
     print("price snapshot:", snapshot)
 
-    indicators = get_indicators(df)
+    # Phase 5: get_indicators now takes (ticker, as_of_date) — SQL handles the
+    # bitemporal predicate internally, same guarantee as get_price_history().
+    indicators = get_indicators(ticker, as_of_date)
     print("indicators:", indicators)
 
     news = get_news(ticker, as_of_date)
@@ -42,8 +44,7 @@ def main():
 
     print("\nall as-of-date and cap checks passed")
     print("(inspect the summaries above by eye — truncation is regex sentence-splitting,")
-    print(" which can cut early on abbreviations like 'D. E. Shaw'; NEWS_SUMMARY_MAX_SENTENCES "
-          f"is {NEWS_SUMMARY_MAX_SENTENCES})")
+    print(f" which can cut early on abbreviations; NEWS_SUMMARY_MAX_SENTENCES is {NEWS_SUMMARY_MAX_SENTENCES})")
 
 
 if __name__ == "__main__":
