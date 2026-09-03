@@ -44,7 +44,7 @@ def call_llm(
         except Exception as exc:  # malformed JSON, schema mismatch, connection error, etc.
             last_error = exc
             latency = time.monotonic() - start
-            _log_call(run_state, agent_name, model, attempt, None, None, latency, success=False)
+            _log_call(run_state, agent_name, model, attempt, None, None, latency, {"error": str(exc)}, False)
             working_messages = _with_correction(messages, str(exc))
             continue
 
@@ -56,11 +56,11 @@ def call_llm(
 
         if message.parsed is None:
             last_error = ValueError(message.refusal or "model returned no parsed content")
-            _log_call(run_state, agent_name, model, attempt, prompt_tokens, completion_tokens, latency, success=False)
+            _log_call(run_state, agent_name, model, attempt, prompt_tokens, completion_tokens, latency, {"error": str(last_error)}, False)
             working_messages = _with_correction(messages, str(last_error))
             continue
 
-        _log_call(run_state, agent_name, model, attempt, prompt_tokens, completion_tokens, latency, success=True)
+        _log_call(run_state, agent_name, model, attempt, prompt_tokens, completion_tokens, latency, message.parsed.model_dump(), True)
         return message.parsed
 
     raise RuntimeError(
@@ -77,7 +77,7 @@ def _with_correction(original_messages: list[dict], error: str) -> list[dict]:
     return original_messages + [{"role": "user", "content": correction}]
 
 
-def _log_call(run_state, agent_name, model, attempt, prompt_tokens, completion_tokens, latency_s, success):
+def _log_call(run_state, agent_name, model, attempt, prompt_tokens, completion_tokens, latency_s, payload, success):
     run_state.llm_calls.append({
         "agent": agent_name,
         "model": model,
@@ -85,6 +85,7 @@ def _log_call(run_state, agent_name, model, attempt, prompt_tokens, completion_t
         "prompt_tokens": prompt_tokens,
         "completion_tokens": completion_tokens,
         "latency_s": round(latency_s, 3),
+        "payload": payload,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "success": success,
     })
