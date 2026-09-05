@@ -60,7 +60,7 @@ def call_llm(
             working_messages = _with_correction(messages, str(last_error))
             continue
 
-        _log_call(run_state, agent_name, model, attempt, prompt_tokens, completion_tokens, latency, message.parsed.model_dump(), True)
+        _log_call(run_state, agent_name, model, attempt, prompt_tokens, completion_tokens, latency, message.parsed.model_dump(mode="json"), True)
         return message.parsed
 
     raise RuntimeError(

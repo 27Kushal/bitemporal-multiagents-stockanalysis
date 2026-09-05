@@ -54,7 +54,7 @@ changes AS (
 ),
 
 rsi(rn, avg_gain, avg_loss) AS (
-    SELECT %(rsi_seed_rn)s :: int,
+    SELECT %(rsi_seed_rn)s :: bigint,
            AVG(CASE WHEN chg > 0 THEN  chg ELSE 0 END),
            AVG(CASE WHEN chg < 0 THEN -chg ELSE 0 END)
     FROM changes
@@ -72,7 +72,7 @@ rsi(rn, avg_gain, avg_loss) AS (
 ),
 
 ema(rn, ema_fast, ema_slow) AS (
-    SELECT rn, close, close FROM prices WHERE rn = 1
+    SELECT rn, close::numeric, close::numeric FROM prices WHERE rn = 1
 
     UNION ALL
 
@@ -88,7 +88,7 @@ macd_line AS (
 ),
 
 signal_line(rn, macd, signal) AS (
-    SELECT rn, macd, macd FROM macd_line WHERE rn = 1
+    SELECT rn, macd::numeric, macd::numeric FROM macd_line WHERE rn = 1
 
     UNION ALL
 
