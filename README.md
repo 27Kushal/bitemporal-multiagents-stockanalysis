@@ -110,6 +110,38 @@ python scripts/verify_tools.py AAPL 2024-03-01
 Asserts that every price row and every news item is on or before `as_of_date`.
 The assertion is now enforced by SQL predicates, not Python filters.
 
+### Run multi-agent debate
+
+```bash
+python scripts/run_multi_agent_demo.py AAPL 2024-03-01
+```
+
+Runs the full dialectic: Analyst distils facts -> Bull & Bear debate with direct rebuttals -> Judge issues verdict. Persists the run, all agent messages, and verdict atomically into PostgreSQL.
+
+### Run live look-ahead bias demo
+
+```bash
+python scripts/demo_lookahead_bias.py AAPL 2024-03-01
+```
+
+Demonstrates the core database invariant: side-by-side execution showing how a naive query leaks restated future earnings vs how the bitemporal predicate locks to historical truth.
+
+### Compare Baseline vs Multi-Agent runs
+
+```bash
+python eval/compare_runs.py
+```
+
+Queries the `run`, `verdict`, and `agent_message` tables to compute recommendation agreement rates, confidence shifts, token overhead, and latency metrics.
+
+### Run evaluation matrix
+
+```bash
+python eval/run_matrix.py
+```
+
+Executes both modes across a matrix of tickers and dates with automated data ingestion and persistent logging.
+
 ### Generate reference database (for demos)
 
 ```bash
@@ -131,23 +163,32 @@ python scripts/make_reference_db.py
 │   └── indexes.sql            # 5 composite indexes (equality cols first for B-tree)
 ├── src/
 │   ├── state.py               # Pydantic models: RunConfig, AnalystReport, JudgeVerdict …
-│   ├── llm.py                 # Single call_llm() gateway, retry loop, call logging
-│   ├── pipeline.py            # _gather_raw_data() shared by both paths
+│   ├── llm.py                 # Single call_llm() gateway, retry loop, JSONB payload logging
+│   ├── pipeline.py            # _gather_raw_data(), run_baseline(), run_multi_agent()
 │   ├── db/
 │   │   ├── connection.py      # get_connection() factory
-│   │   └── ingest.py          # ensure_company, ingest_prices/news/fundamentals
+│   │   ├── ingest.py          # ensure_company, ingest_prices/news/fundamentals
+│   │   ├── indicators_sql.py  # RSI-14 & MACD in SQL recursive CTEs & window functions
+│   │   └── runs.py            # DB persistence for runs, agent messages, and verdicts
 │   ├── tools/
 │   │   ├── prices.py          # get_price_history() — bitemporal SQL query
 │   │   ├── news.py            # get_news() — published_at SQL filter
-│   │   └── indicators.py      # RSI-14, MACD 12/26/9 (pandas, moves to SQL in Phase 5)
+│   │   └── indicators.py      # delegates to SQL, retains pandas fallbacks
 │   └── agents/
-│       └── baseline.py        # Single-model path → JudgeVerdict
+│       ├── baseline.py        # Single-model path → JudgeVerdict
+│       ├── analyst.py         # Objective fact distillation (no recommendation)
+│       ├── debater.py         # Bull & Bear debaters with direct rebuttals
+│       └── judge.py           # Evaluates debate + strongest counterpoint → JudgeVerdict
 ├── scripts/
 │   ├── ingest.py              # CLI: python scripts/ingest.py TICKER [DATE]
 │   ├── run_baseline_demo.py   # CLI: run baseline path and print verdict
+│   ├── run_multi_agent_demo.py# CLI: run multi-agent debate and print transcript
+│   ├── demo_lookahead_bias.py # CLI: live proof of bitemporal look-ahead bias prevention
 │   ├── verify_tools.py        # Assert as-of-date bounds hold end-to-end
 │   └── make_reference_db.py   # Generate SQLite + HTML reference for demos
-├── eval/                      # Phase 8: comparison queries (not yet implemented)
+├── eval/
+│   ├── compare_runs.py        # SQL aggregation of baseline vs multi-agent metrics
+│   └── run_matrix.py          # Batch runner across tickers and dates
 ├── modelfiles/
 │   └── qwen2.5-7b-ctx8k.Modelfile
 └── requirements.txt
@@ -165,10 +206,10 @@ python scripts/make_reference_db.py
 | 2 — Baseline agent | ✅ Done | `src/llm.py`, `src/agents/baseline.py`, `src/pipeline.py`, tools |
 | 3 — Bitemporal schema | ✅ Done | `db/schema.sql`, `db/indexes.sql` |
 | 4 — Ingest + SQL tools | ✅ Done | `src/db/`, `scripts/ingest.py`, tools rewritten to SQL |
-| 5 — SQL indicators | 🔲 Next | RSI/MACD in SQL window functions |
-| 6 — DB-persisted runs | 🔲 | Transaction-wrapped pipeline, `run`/`agent_message`/`verdict` written |
-| 7 — Multi-agent path | 🔲 | Analyst → Bull ↔ Bear → Judge |
-| 8 — Demo + eval | 🔲 | Look-ahead bias live demo, `eval/compare_runs.py` |
+| 5 — SQL indicators | ✅ Done | RSI/MACD in SQL recursive CTEs & window functions |
+| 6 — DB-persisted runs | ✅ Done | Transaction-wrapped pipeline, `run`/`agent_message`/`verdict` |
+| 7 — Multi-agent path | ✅ Done | Analyst → Bull ↔ Bear debate → Judge |
+| 8 — Demo + eval | ✅ Done | Look-ahead bias live demo, `compare_runs.py`, `run_matrix.py` |
 
 ---
 
