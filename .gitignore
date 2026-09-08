@@ -9,3 +9,11 @@ __pycache__/
 # Generated outputs — recreate with scripts/ingest.py and reference_db/make_reference.py
 reference_db/
 *.docx
+
+# Generated deliverables and scripts
+*.pptx
+*.png
+build_ppt.py
+generate_paper.py
+draw_architecture.py
+inspect_pptx.py
